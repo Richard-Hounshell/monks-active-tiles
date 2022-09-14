@@ -267,6 +267,7 @@
   "MonksActiveTiles.state.open": "Open",
   "MonksActiveTiles.state.closed": "Closed",
   "MonksActiveTiles.state.locked": "Locked",
+  "MonksActiveTiles.state.locked": "Unlocked",
   "MonksActiveTiles.state.toggle": "Toggle",
   "MonksActiveTiles.state.add": "Add",
   "MonksActiveTiles.state.remove": "Remove",
