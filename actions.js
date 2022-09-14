@@ -5501,6 +5501,153 @@ Hooks.on("setupTileActions", (app) => {
             }
         });
     }
+	
+    if (game.modules.get('item-piles')?.active) {
+        app.registerTileGroup('item-piles', "Item Piles");
+        app.registerTileAction('item-piles', 'locked', {
+            name: 'Lock State',
+            ctrls: [
+                {
+                    id: "entity",
+                    name: "MonksActiveTiles.ctrl.select-entity",
+                    type: "select",
+                    subtype: "entity",
+                    options: { showTile: true, showToken: true, showWithin: true, showPlayers: true, showPrevious: true, showTagger: true },
+                    restrict: (entity) => { return (entity instanceof Token); }
+                },
+                {
+                    id: "state",
+                    name: "MonksActiveTiles.ctrl.state",
+                    list: "state",
+                    type: "list",
+                    defvalue: 'toggle'
+                }
+            ],
+            values: {
+                'state': {
+                    'locked': "MonksActiveTiles.state.locked",
+                    'unlocked': "MonksActiveTiles.state.unlocked",
+                    'toggle': "MonksActiveTiles.state.toggle"
+                }
+            },
+            group: 'item-piles',
+            fn: async (args = {}) => {
+                const { action, userid } = args;
+
+                let entities = await MonksActiveTiles.getEntities(args);
+                if (entities.length) {
+                    if (action.data.state == 'locked')
+                        ItemPiles.API.lockItemPile(entities[0]);
+                    else if (action.data.state == 'unlocked')
+                        ItemPiles.API.unlockItemPile(entities[0]);
+                    else if (action.data.state == 'toggle')
+                        ItemPiles.API.toggleItemPileLocked(entities[0]);
+                }
+
+                return { tokens: entities };
+            },
+            content: async (trigger, action) => {
+				let entityName = await MonksActiveTiles.entityName(action.data?.entity);
+                return `<span class="action-style">Item Pile</span> <span class="entity-style">${entityName}</span> locked state: <span class="details-style">"${i18n(trigger.values.state[action.data?.state])}"</span>`;
+            }
+        });
+		app.registerTileAction('item-piles', 'islocked', {
+            name: 'Is Pile Locked',
+            ctrls: [
+                {
+                    id: "entity",
+                    name: "MonksActiveTiles.ctrl.select-entity",
+                    type: "select",
+                    subtype: "entity",
+                    options: { showTile: true, showToken: true, showWithin: true, showPlayers: true, showPrevious: true, showTagger: true },
+                    restrict: (entity) => { return (entity instanceof Token); }
+                },
+                {
+                    id: "unlocked",
+                    name: "If Unlocked Goto",
+                    type: "text",
+                    placeholder: "Leave blank to stop"
+                }
+            ],
+            values: {
+                'state': {
+                    'locked': "MonksActiveTiles.state.locked",
+                    'unlocked': "MonksActiveTiles.state.unlocked",
+                    'toggle': "MonksActiveTiles.state.toggle"
+                }
+            },
+            group: 'item-piles',
+            fn: async (args = {}) => {
+                const { action, userid } = args;
+
+                let entities = await MonksActiveTiles.getEntities(args);
+				
+				let goto = action.data?.unlocked || "";
+
+                if (goto.includes("{{")) {
+                    let context = {
+                        actor: tokens[0]?.actor?.data,
+                        token: tokens[0]?.data,
+                        tile: tile.data,
+                        user: game.users.get(userid),
+                        value: value,
+                        scene: canvas.scene,
+                        method: method,
+                        change: change
+                    };
+
+                    const compiled = Handlebars.compile(goto);
+                    goto = compiled(context, { allowProtoMethodsByDefault: true, allowProtoPropertiesByDefault: true }).trim();
+                }
+                
+				let locked = false;
+				try {
+					locked = ItemPiles.API.isItemPileLocked(entities[0]);
+				} catch {
+				}
+
+				let result = { continue: (locked || goto != "") };
+				result[action.data?.collection || "tokens"] = entities;
+				if (goto != "" && !locked)
+					result.goto = goto;
+
+				return result;
+            },
+            content: async (trigger, action) => {
+				let entityName = await MonksActiveTiles.entityName(action.data?.entity);
+				let goto = action.data?.unlocked || "";
+                return `<span class="action-style">Item Pile</span> <span class="entity-style">${entityName}</span>, continue if locked ${goto != "" ? ' goto <span class="details-style">"' + goto + '"</span> if unlocked' : ""}`;
+            }
+        });
+//		app.registerTileAction('item-piles', 'interact', {
+//            name: 'Interact',
+//            ctrls: [
+//                {
+//                    id: "entity",
+//                    name: "MonksActiveTiles.ctrl.select-entity",
+//                    type: "select",
+//                    subtype: "entity",
+//                    options: { showTagger: true },
+//                    restrict: (entity) => { return (entity instanceof Token); }
+//                }
+//            ],
+//            group: 'item-piles',
+//            fn: async (args = {}) => {
+//                const { action, userid } = args;
+//
+//                let entities = await MonksActiveTiles.getEntities(args, action.data?.entity || 'tokens');
+//                if (entities.length) {
+//                    ItemPiles.API.openItemPileInventory(entities[0], userid, false, true);
+//                }
+//
+//                return { tokens: entities };
+//            },
+//            content: async (trigger, action) => {
+//				let entityName = await MonksActiveTiles.entityName(action.data?.entity);
+//				return `<span class="action-style">Item Pile</span> <span class="entity-style">${entityName}</span> opened by triggering token`;
+//            }
+//        });
+    }
 
     if (game.modules.get('confetti')?.active) {
         app.registerTileGroup('confetti', "Confetti");
